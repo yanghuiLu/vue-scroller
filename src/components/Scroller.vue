@@ -34,7 +34,7 @@
         </span>
 
         <div class="no-data-text"
-          :class="{'active': !showLoading && loadingState == 2}" :style="{color: loadingLayerColor}" 
+          :class="{'active': (!showLoading && loadingState == 2)||noMoreData}" :style="{color: loadingLayerColor}" 
           v-text="noDataText">
         </div>
       </div>
@@ -80,16 +80,16 @@
     height: 60px;
     margin-top: -60px;
     text-align: center;
-    font-size: 16px;
+    font-size: 12px;
     color: #AAA;
   }
 
   ._v-container > ._v-content > .loading-layer {
     width: 100%;
-    height: 60px;
+    height: 70px;
     text-align: center;
-    font-size: 16px;
-    line-height: 60px;
+    font-size: 12px;
+    line-height: 55px;
     color: #AAA;
     position: relative;
   }
@@ -277,13 +277,23 @@
           : false
       }
     },
-
+    watch:{
+      width(nval,oval){
+        this.container.style.width = this.w
+      },
+      height(nval,oval){
+        console.log(nval,oval)
+        this.container.style.height = this.h
+      }
+    },
     data() {
       return {
         containerId: 'outer-' + Math.random().toString(36).substring(3, 8),
         contentId: 'inner-' + Math.random().toString(36).substring(3, 8),
         state: 0, // 0: pull to refresh, 1: release to refresh, 2: refreshing
         loadingState: 0, // 0: stop, 1: loading, 2: stopping loading
+
+        noMoreData: false,
 
         showLoading: false,
 
@@ -298,100 +308,108 @@
     },
 
     mounted () {
-      this.container = document.getElementById(this.containerId)
-      this.container.style.width = this.w
-      this.container.style.height = this.h
-
-      this.content = document.getElementById(this.contentId)
-      if (this.cssClass) this.content.classList.add(this.cssClass)
-      this.pullToRefreshLayer = this.content.getElementsByTagName("div")[0]
-
-      let render = getContentRender(this.content)
-
-      let scrollerOptions = {
-        scrollingX: false
-      }
-
-      this.scroller = new Scroller(render, {
-        scrollingX: false,
-        snapping: this.snapping,
-        animating: this.animating,
-        animationDuration: this.animationDuration,
-        bouncing: this.bouncing
-      })
-
-      // enable PullToRefresh
-      if (this.onRefresh) {
-        this.scroller.activatePullToRefresh(60, () => {
-          this.state = 1
-        }, () => {
-          this.state = 0
-        }, () => {
-          this.state = 2
-
-          this.$on('$finishPullToRefresh', () => {
-            setTimeout(() => {
-              this.state = 0
-              this.finishPullToRefresh()
-            })
-          })
-
-          this.onRefresh(this.finishPullToRefresh)
-        })
-      }
-
-      // enable infinite loading
-      if (this.onInfinite) {
-        this.infiniteTimer = setInterval(() => {
-          let {left, top, zoom} = this.scroller.getValues()
-
-          // 在 keep alive 中 deactivated 的组件长宽变为 0 
-          if (this.content.offsetHeight > 0 && 
-            top + 60 > this.content.offsetHeight - this.container.clientHeight) {
-            if (this.loadingState) return
-            this.loadingState = 1
-            this.showLoading = true
-            this.onInfinite(this.finishInfinite)
-          }
-        }, 10);
-      }
-
-      // setup scroller
-      let rect = this.container.getBoundingClientRect()
-      this.scroller.setPosition(rect.left + this.container.clientLeft, rect.top + this.container.clientTop)
-
-      // snapping
-      if (this.snapping) {
-        // console.log(this.snapWidth, this.snapHeight)
-        this.scroller.setSnapSize(this.snapWidth, this.snapHeight)
-      }
-
-      // onContentResize
-      const contentSize = () => {
-        return {
-          width: this.content.offsetWidth,
-          height: this.content.offsetHeight
-        }
-      }
-
-      let { content_width, content_height } = contentSize()
-      
-      this.resizeTimer = setInterval(() => {
-        let {width, height} = contentSize()
-        if (width !== content_width || height !== content_height) {
-          content_width = width
-          content_height = height
-          this.resize()
-        }
-      }, 10);
+      this.start()
     },
 
     destroyed () {
-      clearInterval(this.resizeTimer);
-      if (this.infiniteTimer) clearInterval(this.infiniteTimer);
+      this.stop()
     },
 
     methods: {
+      stop(){
+        clearInterval(this.resizeTimer);
+        if (this.infiniteTimer) clearInterval(this.infiniteTimer);
+      },
+      
+      start(){
+        this.container = document.getElementById(this.containerId)
+        this.container.style.width = this.w
+        this.container.style.height = this.h
+
+        this.content = document.getElementById(this.contentId)
+        if (this.cssClass) this.content.classList.add(this.cssClass)
+        this.pullToRefreshLayer = this.content.getElementsByTagName("div")[0]
+
+        let render = getContentRender(this.content)
+
+        let scrollerOptions = {
+          scrollingX: false
+        }
+
+        this.scroller = new Scroller(render, {
+          scrollingX: false,
+          snapping: this.snapping,
+          animating: this.animating,
+          animationDuration: this.animationDuration,
+          bouncing: this.bouncing
+        })
+
+        // enable PullToRefresh
+        if (this.onRefresh) {
+          this.scroller.activatePullToRefresh(60, () => {
+            this.state = 1
+          }, () => {
+            this.state = 0
+          }, () => {
+            this.state = 2
+
+            this.$on('$finishPullToRefresh', () => {
+              setTimeout(() => {
+                this.state = 0
+                this.finishPullToRefresh()
+              })
+            })
+
+            this.onRefresh(this.finishPullToRefresh)
+            this.noMoreData = false;
+            console.log('noMoreData fasle')
+          })
+        }
+
+        // enable infinite loading
+        if (this.onInfinite) {
+          this.infiniteTimer = setInterval(() => {
+            let {left, top, zoom} = this.scroller.getValues()
+            // 在 keep alive 中 deactivated 的组件长宽变为 0 
+            if (this.content.offsetHeight > 0 && 
+              top + 60 > this.content.offsetHeight - this.container.clientHeight) {
+              if (this.loadingState) return
+              this.loadingState = 1
+              this.showLoading = true
+              this.onInfinite(this.finishInfinite)
+            }
+          }, 20);
+        }
+
+        // setup scroller
+        let rect = this.container.getBoundingClientRect()
+        this.scroller.setPosition(rect.left + this.container.clientLeft, rect.top + this.container.clientTop)
+
+        // snapping
+        if (this.snapping) {
+          // console.log(this.snapWidth, this.snapHeight)
+          this.scroller.setSnapSize(this.snapWidth, this.snapHeight)
+        }
+
+        // onContentResize
+        const contentSize = () => {
+          return {
+            width: this.content.offsetWidth,
+            height: this.content.offsetHeight
+          }
+        }
+
+        let { content_width, content_height } = contentSize()
+        
+        this.resizeTimer = setInterval(() => {
+          let {width, height} = contentSize()
+          if (width !== content_width || height !== content_height) {
+            content_width = width
+            content_height = height
+            this.resize()
+          }
+        }, 20);
+      },
       resize() {
         let container = this.container;
         let content = this.content;
@@ -407,6 +425,8 @@
         this.showLoading = false
 
         if (this.loadingState == 2) {
+          this.noMoreData = true;
+          console.log('noMoreData true')
           this.resetLoadingState()
         }
       },
