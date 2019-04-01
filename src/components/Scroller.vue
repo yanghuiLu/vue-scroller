@@ -408,6 +408,8 @@
             content_height = height
             this.resize()
           }
+          let position = this.getPosition();
+          this.$emit('scroll',position)
         }, 20);
       },
       resize() {
