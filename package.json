@@ -10,6 +10,8 @@
     "url": "https://github.com/yanghuiLu/vue-scroller.git"
   },
   "scripts": {
+    "publish": "npm version patch",
+    "push": "git add .&& sleep 0.5 && sleep 0.5 && git commit -am update && sleep 0.5 && git pull && sleep 0.5 && git push",
     "dev": "webpack-dev-server --inline --hot --host=127.0.0.1 --port=8081",
     "doc": "cross-env NODE_ENV=production BUILD=doc webpack --progress --hide-modules",
     "build": "cross-env NODE_ENV=production BUILD=publish webpack --progress --hide-modules"

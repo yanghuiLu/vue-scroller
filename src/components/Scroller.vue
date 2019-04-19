@@ -267,14 +267,14 @@
       },
 
       showInfiniteLayer () {
-        let contentHeight = 0 
-        this.content
-          ? contentHeight = this.content.offsetHeight
-          : void 666
-
-        return this.onInfinite
-          ? contentHeight > this.minContentHeight
-          : false
+        // let contentHeight = 0 
+        // this.content
+        //   ? contentHeight = this.content.offsetHeight
+        //   : void 666
+        // return this.onInfinite
+        //   ? contentHeight > this.minContentHeight
+        //   : false
+        return true;
       }
     },
     watch:{
